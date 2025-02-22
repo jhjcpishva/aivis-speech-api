@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.responses import Response
 
 from convert_to_mp3 import convert_to_mp3
+from split_sentence_for_tts import split_sentence_for_tts
 
 logger = logging.getLogger('uvicorn.app')
 speaker_id = "888753760"
@@ -44,6 +45,13 @@ async def speech(
     logger.info(f"🐶 MP3 Encoded. mp3 size: {len(encoded)/1024:.1f}KB")
 
     return Response(io.BytesIO(encoded).getvalue(), media_type="audio/mpeg")
+
+@app.get("/split_sentence")
+async def split_sentence(text: str):
+    sentences = split_sentence_for_tts(text, 100)
+    for sentence in sentences:
+        logger.info(f"🐶 Split Sentence: {len(sentence) = }, {sentence[:20]}")
+    return { "sentences": sentences }
 
 
 if __name__ == '__main__':
