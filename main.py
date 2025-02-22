@@ -1,13 +1,12 @@
 import io
 import logging
-import wave
 from enum import Enum
 
 import httpx
-import lameenc
 from fastapi import FastAPI
 from fastapi.responses import Response
 
+from convert_to_mp3 import convert_to_mp3
 
 logger = logging.getLogger('uvicorn.app')
 speaker_id = "888753760"
@@ -19,21 +18,6 @@ class AudioFormat(str, Enum):
     WAV = "wav"
     MP3 = "mp3"
     
-
-def convert_to_mp3(audio_content: bytes) -> bytes:
-    with wave.open(io.BytesIO(audio_content), 'rb') as wf:
-        params = wf.getparams()
-        frames = wf.readframes(wf.getnframes())
-
-    encoder = lameenc.Encoder()
-    encoder.silence()
-    encoder.set_bit_rate(64)
-    encoder.set_quality(7)  # 2 best, 7 fast
-    encoder.set_in_sample_rate(params.framerate)
-    encoder.set_channels(params.nchannels)
-    encoded = encoder.encode(frames) + encoder.flush()
-    return encoded
-
 
 @app.get("/speech")
 async def speech(
