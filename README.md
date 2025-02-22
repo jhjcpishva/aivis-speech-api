@@ -26,3 +26,43 @@ CONTEXT_PATH="/"
   - Responses `audio/mp3` or `audio/wav` for `format=wav`
 - `GET /split_sentence`
   - Utility function to split text input to sentence array by Japanese characters `。` `！` `？`.
+
+## Run
+
+### Docker
+
+```sh
+docker run \
+  -e AIVIS_ENGINE_URL="http://host.docker.internal:10101" \
+  -p 8000:8000 \
+  ghcr.io/jhjcpishva/aivis-speech-fast-api:latest
+```
+
+### Docker Compose
+
+```yaml
+services:
+  fastapi:
+    # build: .
+    image: ghcr.io/jhjcpishva/aivis-speech-fast-api:latest
+    environment:
+      - AIVIS_ENGINE_URL=http://aivisspeech-engine:10101/
+    depends_on:
+      aivisspeech-engine:
+        condition: service_healthy
+    ports:
+      - 8000:8000
+
+  aivisspeech-engine:
+    image: ghcr.io/aivis-project/aivisspeech-engine:cpu-latest
+    # ports:
+    #   - 10101:10101
+    volumes:
+      - ./docker/aivis-speech-engine:/home/user/.local/share/AivisSpeech-Engine-Dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:10101/version"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+
+```
