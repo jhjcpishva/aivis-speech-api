@@ -19,8 +19,7 @@ CONTEXT_PATH="/"
 
 ## Documentation
 
-- API documentation is available at `/docs`.
-- Swagger UI is accessible at `/redoc`.
+- API documentation is available at `/docs` or `/redoc`.
 - `GET /synthesis`
   - Generate audio response from provided `text`
   - Responses `audio/mp3` or `audio/wav` for `format=wav`
