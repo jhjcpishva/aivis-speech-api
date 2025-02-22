@@ -10,7 +10,7 @@ def split_sentence_for_tts(text):
         if not paragraph.strip():
             continue  # 空行はスキップ
         
-        # 2. カッコ内の区切り文字(「。」や「！」、「？」)を除外しながら分割
+        # 2. 区切り文字(「。」や「！」、「？」)で分割。カッコ内の文字は区切り文字とみなさない
         sentences = re.split(r'(?<![「『])([。！？]+)(?![」』])', paragraph.strip())
 
         # 3. 分割された文を分割文字と合わせて結合
