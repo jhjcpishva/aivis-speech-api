@@ -11,4 +11,4 @@ wheels/
 
 #
 .env
-docker/aivis-speech-engine
+docker/aivisspeech-engine
