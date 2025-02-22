@@ -48,7 +48,7 @@ async def speech(
 
 @app.get("/split_sentence")
 async def split_sentence(text: str):
-    sentences = split_sentence_for_tts(text, 100)
+    sentences = split_sentence_for_tts(text)
     for sentence in sentences:
         logger.info(f"🐶 Split Sentence: {len(sentence) = }, {sentence[:20]}")
     return { "sentences": sentences }
