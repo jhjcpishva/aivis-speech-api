@@ -26,24 +26,24 @@ async def speech(
     volume: float = 0.5,
     pitch: float = 0,
     speed: float = 1,
-    speaker: str = config.AIVIS_ENGINE_SPEAKER_ID,
+    speaker: str = config.AIVIS_SPEECH_ENGINE_SPEAKER_ID,
     format: AudioFormat = AudioFormat.MP3):
 
-    logger.info(f"🐶 Request {text = } {volume = } {pitch = } {speed = } {format = }")
+    logger.info(f"- Request {text = } {volume = } {pitch = } {speed = } {format = } {speaker = }")
     # AivisSpeech で音声を作成する
     async with httpx.AsyncClient() as client:
-        audio_query = (await client.post(f"{config.AIVIS_ENGINE_URL}/audio_query?text={text}&speaker={speaker}")).json()
+        audio_query = (await client.post(f"{config.AIVIS_SPEECH_ENGINE_URL}/audio_query?text={text}&speaker={speaker}")).json()
         audio_query["volumeScale"] = volume
         audio_query["pitchScale"] = pitch
         audio_query["speedScale"] = speed
-        audio = await client.post(f"{config.AIVIS_ENGINE_URL}/synthesis?speaker={speaker}", json=audio_query, timeout=None)
-    logger.info(f"🐶 TTS Complete. wav size: {len(audio.content)/1024:.1f}KB")
+        audio = await client.post(f"{config.AIVIS_SPEECH_ENGINE_URL}/synthesis?speaker={speaker}", json=audio_query, timeout=None)
+    logger.info(f"- TTS Complete. wav size: {len(audio.content)/1024:.1f}KB")
 
     if format == AudioFormat.WAV:
         return Response(audio.content, media_type="audio/wav")
 
     encoded = convert_to_mp3(audio.content)  # convert to mp3
-    logger.info(f"🐶 MP3 Encoded. mp3 size: {len(encoded)/1024:.1f}KB")
+    logger.info(f"- MP3 Encoded. mp3 size: {len(encoded)/1024:.1f}KB")
 
     return Response(io.BytesIO(encoded).getvalue(), media_type="audio/mpeg")
 
@@ -51,7 +51,7 @@ async def speech(
 async def split_sentence(text: str):
     sentences = split_sentence_for_tts(text)
     for sentence in sentences:
-        logger.info(f"🐶 Split Sentence: {len(sentence) = }, {sentence[:20]}")
+        logger.info(f"- Split Sentence: {len(sentence) = }, {sentence[:20]}")
     return { "sentences": sentences }
 
 

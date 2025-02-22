@@ -10,8 +10,8 @@
 ## .env
 
 ```.env
-AIVIS_ENGINE_URL="http://localhost:10101/"
-AIVIS_ENGINE_SPEAKER_ID="888753760"
+AIVIS_SPEECH_ENGINE_URL="http://localhost:10101/"
+AIVIS_SPEECH_ENGINE_SPEAKER_ID="888753760"
 
 PORT="8000"
 CONTEXT_PATH="/"
@@ -32,7 +32,7 @@ CONTEXT_PATH="/"
 
 ```sh
 docker run \
-  -e AIVIS_ENGINE_URL="http://host.docker.internal:10101" \
+  -e AIVIS_SPEECH_ENGINE_URL="http://host.docker.internal:10101" \
   -p 8000:8000 \
   ghcr.io/jhjcpishva/aivis-speech-fast-api:latest
 ```
@@ -45,7 +45,7 @@ services:
     # build: .
     image: ghcr.io/jhjcpishva/aivis-speech-fast-api:latest
     environment:
-      - AIVIS_ENGINE_URL=http://aivisspeech-engine:10101/
+      - AIVIS_SPEECH_ENGINE_URL=http://aivisspeech-engine:10101/
     depends_on:
       aivisspeech-engine:
         condition: service_healthy
@@ -57,7 +57,7 @@ services:
     # ports:
     #   - 10101:10101
     volumes:
-      - ./docker/aivis-speech-engine:/home/user/.local/share/AivisSpeech-Engine-Dev
+      - ./docker/aivisspeech-engine:/home/user/.local/share/AivisSpeech-Engine-Dev
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:10101/version"]
       interval: 5s
