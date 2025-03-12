@@ -31,7 +31,7 @@ CONTEXT_PATH="/"
 ### Docker
 
 ```sh
-docker run \
+docker run --rm \
   -e AIVIS_SPEECH_ENGINE_URL="http://host.docker.internal:10101" \
   -p 8000:8000 \
   ghcr.io/jhjcpishva/aivisspeechfastapi:latest
