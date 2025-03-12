@@ -28,12 +28,15 @@ jobs:
 
       - name: Set image name
         id: set-image-name
-        run: echo "image_name=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+        run: |
+          echo "image_name=ghcr.io/$(echo '${{ github.repository }}' | \
+          tr '[:upper:]' '[:lower:]')" | \
+          tee -a $GITHUB_OUTPUT >> $GITHUB_ENV
 
       - name: Build Docker image (without push)
         run: |
           docker buildx build --platform linux/amd64 -t ${{ env.image_name }}:latest .
-  
+
   push:
     needs: build
     if: github.event_name != 'pull_request'
@@ -51,10 +54,13 @@ jobs:
       - name: Login to GHCR
         run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
+      - name: Use build output image name
+        run: echo "IMAGE_NAME=${{ needs.build.outputs.image_name }}" >> $GITHUB_ENV
+
       - name: Push Docker image
         run: |
           TAG=latest
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             TAG=${GITHUB_REF#refs/tags/}
           fi
-          docker buildx build --platform linux/amd64 -t ${{ env.image_name }}:$TAG --push .
+          docker buildx build --platform linux/amd64 -t ${{ env.IMAGE_NAME }}:$TAG --push .
