@@ -1,5 +1,5 @@
 FROM python:3.11-slim
-LABEL org.opencontainers.image.source="https://github.com/jhjcpishva/AivisSpeechFastAPI"
+LABEL org.opencontainers.image.source="https://github.com/jhjcpishva/aivis-speech-api"
 
 # Install uv.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/

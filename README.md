@@ -1,4 +1,4 @@
-# AivisSpeechFastAPI
+# aivis-speech-api
 
 ## Overview
 
@@ -34,7 +34,7 @@ CONTEXT_PATH="/"
 docker run --rm \
   -e AIVIS_SPEECH_ENGINE_URL="http://host.docker.internal:10101" \
   -p 8000:8000 \
-  ghcr.io/jhjcpishva/aivisspeechfastapi:latest
+  ghcr.io/jhjcpishva/aivis-speech-api:latest
 ```
 
 ### Docker Compose
@@ -43,7 +43,7 @@ docker run --rm \
 services:
   fastapi:
     # build: .
-    image: ghcr.io/jhjcpishva/aivisspeechfastapi:latest
+    image: ghcr.io/jhjcpishva/aivis-speech-api:latest
     environment:
       - AIVIS_SPEECH_ENGINE_URL=http://aivisspeech-engine:10101/
     depends_on:
