@@ -22,6 +22,7 @@ DEFAULT_VOLUME = 0.5
 DEFAULT_PITCH = 0.0
 DEFAULT_SPEED = 1.0
 
+
 def build_silence(duration: float, params) -> bytes:
     """Generate raw PCM silence for the given duration based on WAV params."""
     n_channels, sampwidth, framerate, *_ = params
@@ -31,7 +32,8 @@ def build_silence(duration: float, params) -> bytes:
 
 class Sentence(BaseModel):
     """Single sentence TTS parameters."""
-    text: str = Field(..., description="Sentence text to synthesize (required).")
+    text: str = Field(...,
+                      description="Sentence text to synthesize (required).")
     volume: float | None = Field(
         None,
         description=f"Volume scale (0.0-1.0). If omitted, previous sentence's volume is reused. (default: {DEFAULT_VOLUME})",
@@ -92,6 +94,7 @@ async def synthesis(body: RequestBody):
     buffer = io.BytesIO()
     wave_writer = None
     wave_params = None
+    wave_pos: float = 0
 
     logger.info(f"- Request {len(body.sentences)=} {format=}")
 
@@ -133,14 +136,18 @@ async def synthesis(body: RequestBody):
                 wave_writer.setparams(wave_params)
 
             frames = wf.readframes(wf.getnframes())
+            wave_sec = wf.getnframes() / wf.getframerate()
 
             if idx > 0:
                 # ループ2週目以降であれば先頭に空白を挿入
                 if silence_wave is None:
                     silence_wave = build_silence(silence_duration, wave_params)
                 wave_writer.writeframes(silence_wave)
+                wave_pos += silence_duration
+            logger.info(f"  Timing start={wave_pos:.3f}, end={(wave_pos+wave_sec):.3f}, length={wave_sec:.3f}sec")
 
             wave_writer.writeframes(frames)
+            wave_pos += wave_sec
 
     wave_writer.close()
     full_wav = buffer.getvalue()
