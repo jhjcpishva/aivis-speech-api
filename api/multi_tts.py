@@ -6,7 +6,7 @@ from enum import Enum
 import httpx
 from fastapi import APIRouter
 from fastapi.responses import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import config
 from convert_to_mp3 import convert_to_mp3
@@ -16,8 +16,11 @@ from split_sentence_for_tts import split_sentence_for_tts
 logger = logging.getLogger('uvicorn.app')
 router = APIRouter(prefix="/v1")
 
-SILENCE_DURATION = 1.0  # seconds
-
+# Default values
+SILENCE_DURATION = 0.2  # seconds
+DEFAULT_VOLUME = 0.5
+DEFAULT_PITCH = 0.0
+DEFAULT_SPEED = 1.0
 
 def build_silence(duration: float, params) -> bytes:
     """Generate raw PCM silence for the given duration based on WAV params."""
@@ -27,11 +30,24 @@ def build_silence(duration: float, params) -> bytes:
 
 
 class Sentence(BaseModel):
-    text: str
-    volume: float | None = None
-    pitch: float | None = None
-    speed: float | None = None
-    speaker: str | None = None
+    """Single sentence TTS parameters."""
+    text: str = Field(..., description="Sentence text to synthesize (required).")
+    volume: float | None = Field(
+        None,
+        description=f"Volume scale (0.0-1.0). If omitted, previous sentence's volume is reused. (default: {DEFAULT_VOLUME})",
+    )
+    pitch: float | None = Field(
+        None,
+        description=f"Pitch offset in semitones. Inherits the previous value when omitted. (default: {DEFAULT_PITCH})",
+    )
+    speed: float | None = Field(
+        None,
+        description=f"Speaking speed multiplier. Inherits the previous value when omitted. (default: {DEFAULT_SPEED})",
+    )
+    speaker: str | None = Field(
+        None,
+        description=f"Speaker ID. Inherits the previous value when omitted. (default: {config.AIVIS_SPEECH_ENGINE_SPEAKER_ID})",
+    )
 
 
 class AudioFormat(str, Enum):
@@ -40,13 +56,37 @@ class AudioFormat(str, Enum):
 
 
 class RequestBody(BaseModel):
-    format: AudioFormat = AudioFormat.MP3
-    silence_duration: float = SILENCE_DURATION
-    sentences: list[Sentence]
+    """Payload for multi-sentence TTS synthesis."""
+    format: AudioFormat = Field(
+        AudioFormat.MP3,
+        description="Output audio format. Either `wav` or `mp3`.",
+    )
+    silence_duration: float = Field(
+        SILENCE_DURATION,
+        description="Duration of silence (in seconds) inserted between sentences.",
+    )
+    sentences: list[Sentence] = Field(
+        ...,
+        description="Ordered list of sentences to synthesize. "
+                    "Parameters omitted in a sentence inherit the value "
+                    "defined in its immediate predecessor.",
+    )
 
 
-@router.post("/synthesis")
+@router.post(
+    "/synthesis",
+    summary="Multi-sentence TTS synthesis",
+    response_description="Binary audio (WAV or MP3)",
+)
 async def synthesis(body: RequestBody):
+    """Concatenate TTS audio for multiple sentences.
+
+    Each sentence in `body.sentences` is converted to speech in order.
+    For sentences after the first, any of `volume`, `pitch`, `speed`,
+    or `speaker` that are omitted will inherit the value used for the
+    previous sentence.  A silence of `silence_duration` seconds is
+    automatically inserted between each sentence before concatenation.
+    """
     format = body.format
     silence_duration = body.silence_duration
     buffer = io.BytesIO()
@@ -58,9 +98,9 @@ async def synthesis(body: RequestBody):
     num_sentences = len(body.sentences)
     silence_wave: bytes | None = None
 
-    volume = body.sentences[0].volume or 0.5
-    pitch = body.sentences[0].pitch or 0
-    speed = body.sentences[0].speed or 1
+    volume = body.sentences[0].volume or DEFAULT_VOLUME
+    pitch = body.sentences[0].pitch or DEFAULT_PITCH
+    speed = body.sentences[0].speed or DEFAULT_SPEED
     speaker = body.sentences[0].speaker or config.AIVIS_SPEECH_ENGINE_SPEAKER_ID
 
     for idx, sentence in enumerate(body.sentences):
