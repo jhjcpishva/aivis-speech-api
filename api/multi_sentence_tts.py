@@ -1,7 +1,11 @@
 import io
 import logging
 import wave
+import json
+import tempfile
+from uuid import uuid4
 from enum import Enum
+from pathlib import Path
 
 import httpx
 from fastapi import APIRouter
@@ -10,7 +14,6 @@ from pydantic import BaseModel, Field
 
 import config
 from convert_to_mp3 import convert_to_mp3
-from split_sentence_for_tts import split_sentence_for_tts
 
 
 logger = logging.getLogger('uvicorn.app')
@@ -21,6 +24,8 @@ SILENCE_DURATION = 0.2  # seconds
 DEFAULT_VOLUME = 0.5
 DEFAULT_PITCH = 0.0
 DEFAULT_SPEED = 1.0
+
+TEMP_DIR = Path(tempfile.gettempdir())
 
 
 def build_silence(duration: float, params) -> bytes:
@@ -49,6 +54,33 @@ class Sentence(BaseModel):
     speaker: str | None = Field(
         None,
         description=f"Speaker ID. Inherits the previous value when omitted. (default: {config.AIVIS_SPEECH_ENGINE_SPEAKER_ID})",
+    )
+
+
+class MetaInfoResponse(BaseModel):
+    """Meta information for multi-sentence TTS synthesis."""
+    silence_duration: float = Field(
+        ...,
+        description="Duration of silence (in seconds) inserted between sentences.",
+    )
+    sentence: list['MetaSentenceResponse'] = Field(
+        ...,
+        description="List of sentences with their timing and parameters.",
+    )
+
+
+class MetaSentenceResponse(Sentence):
+    start_second: float = Field(
+        ...,
+        description="Start time of the sentence in seconds.",
+    )
+    end_second: float = Field(
+        ...,
+        description="End time of the sentence in seconds.",
+    )
+    length_second: float = Field(
+        ...,
+        description="Duration of the sentence in seconds.",
     )
 
 
@@ -106,6 +138,11 @@ async def synthesis(body: RequestBody):
     speed = body.sentences[0].speed or DEFAULT_SPEED
     speaker = body.sentences[0].speaker or config.AIVIS_SPEECH_ENGINE_SPEAKER_ID
 
+    meta_info: MetaInfoResponse = MetaInfoResponse(
+        silence_duration=silence_duration,
+        sentence=[],
+    )
+
     for idx, sentence in enumerate(body.sentences):
         text = sentence.text
         volume = sentence.volume or volume
@@ -144,7 +181,22 @@ async def synthesis(body: RequestBody):
                     silence_wave = build_silence(silence_duration, wave_params)
                 wave_writer.writeframes(silence_wave)
                 wave_pos += silence_duration
-            logger.info(f"  Timing start={wave_pos:.3f}, end={(wave_pos+wave_sec):.3f}, length={wave_sec:.3f}sec")
+            logger.info(
+                f"  Timing start={wave_pos:.3f}, end={(wave_pos+wave_sec):.3f}, length={wave_sec:.3f}sec")
+
+            # TTS断片をメタ情報として記録
+            meta_info.sentence.append(
+                MetaSentenceResponse(
+                    text=text,
+                    volume=volume,
+                    pitch=pitch,
+                    speed=speed,
+                    speaker=speaker,
+                    start_second=wave_pos,
+                    end_second=wave_pos + wave_sec,
+                    length_second=wave_sec
+                )
+            )
 
             wave_writer.writeframes(frames)
             wave_pos += wave_sec
@@ -159,4 +211,31 @@ async def synthesis(body: RequestBody):
     encoded = convert_to_mp3(full_wav)  # convert to mp3
     logger.info(f"- MP3 Encoded. mp3 size: {len(encoded)/1024:.1f}KB")
 
-    return Response(io.BytesIO(encoded).getvalue(), media_type="audio/mpeg")
+    # meta 情報を一時ファイルに保存
+    meta_key = uuid4().hex
+    filename = f"{meta_key}.meta.json"
+    with open(TEMP_DIR/filename, "w") as f:
+        f.write(meta_info.model_dump_json())
+    logger.info(f"- Meta info saved to {TEMP_DIR/filename}")
+
+    response_headers = {
+        "X-Meta-Info": meta_key,
+    }
+
+    return Response(
+        io.BytesIO(encoded).getvalue(),
+        media_type="audio/mpeg",
+        headers=response_headers)
+
+
+@router.get(
+    "/synthesis/meta/{meta_info}",
+    summary="collect meta information for multi-sentence TTS synthesis",
+)
+async def get_synthesis_meta(meta_info: str) -> MetaInfoResponse:
+    file = Path(TEMP_DIR / f"{meta_info}.meta.json")
+    if not file.exists():
+        return Response(status_code=404, content="Meta not found (404)")
+
+    with open(file, "r") as f:
+        return MetaInfoResponse.model_validate(json.load(f))
