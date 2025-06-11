@@ -118,6 +118,9 @@ async def synthesis(body: RequestBody):
             audio_query["volumeScale"] = volume
             audio_query["pitchScale"] = pitch
             audio_query["speedScale"] = speed
+            # 前後の無音期間をなくす
+            audio_query["prePhonemeLength"] = 0
+            audio_query["postPhonemeLength"] = 0
             audio = await client.post(f"{config.AIVIS_SPEECH_ENGINE_URL}/synthesis?speaker={speaker}", json=audio_query, timeout=None)
         logger.info(
             f"  TTS Complete. wav size: {len(audio.content)/1024:.1f}KB")
