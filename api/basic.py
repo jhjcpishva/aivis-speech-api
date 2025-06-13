@@ -20,6 +20,7 @@ class AudioFormat(str, Enum):
     MP3 = "mp3"
 
 
+@router.get("/speech")
 @router.get("/synthesis")
 async def speech(
         text: str = "吾輩は猫である。名前はまだ無い",
