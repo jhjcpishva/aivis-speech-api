@@ -9,7 +9,7 @@ from pathlib import Path
 
 import httpx
 from fastapi import APIRouter
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
 from pydantic import BaseModel, Field
 
 import config
@@ -28,11 +28,22 @@ DEFAULT_SPEED = 1.0
 TEMP_DIR = Path(tempfile.gettempdir())
 
 
+
 def build_silence(duration: float, params) -> bytes:
     """Generate raw PCM silence for the given duration based on WAV params."""
     n_channels, sampwidth, framerate, *_ = params
     frame_count = int(framerate * duration)
     return b'\x00' * frame_count * n_channels * sampwidth
+
+
+# Helper: convert seconds to SRT timestamp
+def _sec_to_srt_timestamp(sec: float) -> str:
+    """Convert seconds (float) to SubRip timestamp (HH:MM:SS,mmm)."""
+    ms = int(round(sec * 1000))
+    h, rem = divmod(ms, 3600000)
+    m, rem = divmod(rem, 60000)
+    s, ms_rem = divmod(rem, 1000)
+    return f"{h:02}:{m:02}:{s:02},{ms_rem:03}"
 
 
 class Sentence(BaseModel):
@@ -228,14 +239,53 @@ async def synthesis(body: RequestBody):
         headers=response_headers)
 
 
+
 @router.get(
     "/synthesis/meta/{meta_info}",
     summary="collect meta information for multi-sentence TTS synthesis",
+    response_model=None,
 )
-async def get_synthesis_meta(meta_info: str) -> MetaInfoResponse:
+async def get_synthesis_meta(
+    meta_info: str,
+    fmt: str = "json",
+) -> Response:
+    """
+    Return saved meta information for a previously generated multi-sentence TTS.
+
+    * fmt="json" (default): returns the original MetaInfoResponse.
+    * fmt="srt": generates and returns a SubRip (.srt) subtitle file based on
+      the timing and text contained in the meta info.
+    """
     file = Path(TEMP_DIR / f"{meta_info}.meta.json")
     if not file.exists():
         return Response(status_code=404, content="Meta not found (404)")
 
     with open(file, "r") as f:
-        return MetaInfoResponse.model_validate(json.load(f))
+        meta = MetaInfoResponse.model_validate(json.load(f))
+
+    fmt = fmt.lower()
+    if fmt == "json":
+        return JSONResponse(content=meta.model_dump())
+
+    if fmt == "srt":
+        lines: list[str] = []
+        for idx, sentence in enumerate(meta.sentence, start=1):
+            lines.append(str(idx))
+            lines.append(
+                f"{_sec_to_srt_timestamp(sentence.start_second)} --> "
+                f"{_sec_to_srt_timestamp(sentence.end_second)}"
+            )
+            lines.append(sentence.text)
+            lines.append("")
+        srt_text = "\n".join(lines)
+
+        return Response(
+            srt_text,
+            media_type="application/x-subrip"
+        )
+
+    # Unsupported format requested
+    return Response(
+        status_code=400,
+        content="Unsupported fmt. Use 'json' or 'srt'.",
+    )
