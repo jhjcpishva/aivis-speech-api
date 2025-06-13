@@ -215,13 +215,6 @@ async def synthesis(body: RequestBody):
     wave_writer.close()
     full_wav = buffer.getvalue()
 
-    if format == AudioFormat.WAV:
-        logger.info(f"- Returning WAV. size: {len(full_wav)/1024:.1f}KB")
-        return Response(io.BytesIO(full_wav).getvalue(), media_type="audio/wav")
-
-    encoded = convert_to_mp3(full_wav)  # convert to mp3
-    logger.info(f"- MP3 Encoded. mp3 size: {len(encoded)/1024:.1f}KB")
-
     # meta 情報を一時ファイルに保存
     meta_key = uuid4().hex
     filename = f"{meta_key}.meta.json"
@@ -232,6 +225,14 @@ async def synthesis(body: RequestBody):
     response_headers = {
         "X-Meta-Info": meta_key,
     }
+
+    if format == AudioFormat.WAV:
+        logger.info(f"- Returning WAV. size: {len(full_wav)/1024:.1f}KB")
+        return Response(io.BytesIO(full_wav).getvalue(), media_type="audio/wav", headers=response_headers)
+
+    encoded = convert_to_mp3(full_wav)  # convert to mp3
+    logger.info(f"- MP3 Encoded. mp3 size: {len(encoded)/1024:.1f}KB")
+
 
     return Response(
         io.BytesIO(encoded).getvalue(),
