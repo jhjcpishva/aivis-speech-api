@@ -8,7 +8,6 @@ from fastapi.responses import Response
 
 import config
 from convert_to_mp3 import convert_to_mp3
-from split_sentence_for_tts import split_sentence_for_tts
 
 
 logger = logging.getLogger('uvicorn.app')
@@ -48,11 +47,3 @@ async def speech(
     logger.info(f"- MP3 Encoded. mp3 size: {len(encoded)/1024:.1f}KB")
 
     return Response(io.BytesIO(encoded).getvalue(), media_type="audio/mpeg")
-
-
-@router.get("/split_sentence",)
-async def split_sentence(text: str):
-    sentences = split_sentence_for_tts(text)
-    for sentence in sentences:
-        logger.info(f"- Split Sentence: {len(sentence)=}, {sentence[:20]}")
-    return {"sentences": sentences}

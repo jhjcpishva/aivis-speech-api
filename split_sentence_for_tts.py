@@ -1,10 +1,10 @@
 import re
 
-def split_sentence_for_tts(text):
+def split_sentence_for_tts(text: str) -> list[str]:
     # 1. 改行(\n)で分割
     paragraphs = text.split("\n")
 
-    split_text = []
+    split_text: list[str] = []
     
     for paragraph in paragraphs:
         if not paragraph.strip():
