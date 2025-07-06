@@ -14,7 +14,13 @@ def split_sentence_for_tts(text: str) -> list[str]:
         sentences = re.split(r'(?<![「『])([。！？]+)(?![」』])', paragraph.strip())
 
         # 3. 分割された文を分割文字と合わせて結合
-        split_text.extend([sentences[i].strip() + sentences[i + 1] for i in range(0, len(sentences) - 1, 2)])
+        while _len := len(sentences):
+            if _len == 1:
+                # 例: "区切り文字がなく分割されませんでした"
+                split_text.append(sentences.pop().strip())
+                break
+            # 例: "これはテストの文章です" + "。"
+            split_text.append(f"{sentences.pop(0).strip()}{sentences.pop(0).strip()}")
 
     return split_text
 
