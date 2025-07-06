@@ -1,20 +1,28 @@
 import re
 
+
 def split_sentence_for_tts(text: str) -> list[str]:
     # 1. 改行(\n)で分割
     paragraphs = text.split("\n")
 
     split_text: list[str] = []
-    
+
     for paragraph in paragraphs:
         if not paragraph.strip():
             continue  # 空行はスキップ
-        
+
         # 2. 区切り文字(「。」や「！」、「？」)で分割。カッコ内の文字は区切り文字とみなさない
         sentences = re.split(r'(?<![「『])([。！？]+)(?![」』])', paragraph.strip())
 
         # 3. 分割された文を分割文字と合わせて結合
-        split_text.extend([sentences[i].strip() + sentences[i + 1] for i in range(0, len(sentences) - 1, 2)])
+        while _len := len(sentences):
+            if _len == 1:
+                # 例: "区切り文字がなく分割されませんでした"
+                split_text.append(sentences.pop().strip())
+                break
+            # 例: "これはテストの文章です" + "。"
+            split_text.append(
+                f"{sentences.pop(0).strip()}{sentences.pop(0).strip()}")
 
     return split_text
 
