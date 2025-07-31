@@ -1,10 +1,10 @@
 version = 1
-revision = 3
+revision = 4
 requires-python = ">=3.13"
 
 [[package]]
 name = "aivis-speech-api"
-version = "0.2.1"
+version = "0.2.2"
 source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },

@@ -4,7 +4,7 @@ from enum import Enum
 
 import httpx
 from fastapi import APIRouter
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
 
 import config
 from convert_to_mp3 import convert_to_mp3
@@ -47,3 +47,11 @@ async def speech(
     logger.info(f"- MP3 Encoded. mp3 size: {len(encoded)/1024:.1f}KB")
 
     return Response(io.BytesIO(encoded).getvalue(), media_type="audio/mpeg")
+
+
+@router.get("/health")
+async def health():
+    return JSONResponse(
+        status_code=200,
+        content={"status": "ok"}
+    )

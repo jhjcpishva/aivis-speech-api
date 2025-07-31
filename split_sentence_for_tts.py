@@ -18,7 +18,9 @@ def split_sentence_for_tts(text: str) -> list[str]:
         while _len := len(sentences):
             if _len == 1:
                 # 例: "区切り文字がなく分割されませんでした"
-                split_text.append(sentences.pop().strip())
+                # 例: "第一部。第二部は未完了"
+                if s := sentences.pop().strip():
+                    split_text.append(s)
                 break
             # 例: "これはテストの文章です" + "。"
             split_text.append(
