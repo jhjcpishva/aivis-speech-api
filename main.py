@@ -10,9 +10,9 @@ from api.multi_sentence_tts import router as multi_sentence_tts_router
 logger = logging.getLogger('uvicorn.app')
 
 app = FastAPI()
-app.include_router(basic_router, prefix=config.CONTEXT_PATH)
-app.include_router(sentence_router, prefix=config.CONTEXT_PATH)
-app.include_router(multi_sentence_tts_router, prefix=config.CONTEXT_PATH)
+app.include_router(basic_router, prefix=config.PREFIX_PATH)
+app.include_router(sentence_router, prefix=config.PREFIX_PATH)
+app.include_router(multi_sentence_tts_router, prefix=config.PREFIX_PATH)
 
 
 if __name__ == '__main__':
